@@ -20,6 +20,7 @@ require (
 	github.com/justinas/alice v1.2.0 // indirect
 	github.com/leodido/go-urn v1.2.1 // indirect
 	github.com/lib/pq v1.10.3 // indirect
+	github.com/rs/xid v1.3.0 // indirect
 	github.com/rs/zerolog v1.26.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
