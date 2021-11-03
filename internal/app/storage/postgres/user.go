@@ -103,7 +103,7 @@ func (r *UserRepository) ReadByNameAndPassword(ctx context.Context, name string,
 }
 
 func (r *UserRepository) createTables() error {
-	//_, _ = s.db.Exec(`DROP TABLE IF EXISTS "urls"`)
+	_, _ = r.db.Exec(`DROP TABLE IF EXISTS "users"`)
 	const sqlCreateTable = `
 		CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 		CREATE EXTENSION IF NOT EXISTS "pgcrypto";
@@ -111,7 +111,8 @@ func (r *UserRepository) createTables() error {
 			id uuid DEFAULT uuid_generate_v4(),
 			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 			name TEXT NOT NULL UNIQUE,
-			password TEXT NOT NULL
+			password TEXT NOT NULL,
+		    balance DECIMAL NOT NULL DEFAULT 0
 		);
 `
 

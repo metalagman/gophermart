@@ -4,7 +4,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"gophermart/internal/app/handler"
-	middleware2 "gophermart/internal/app/middleware"
+	mw "gophermart/internal/app/middleware"
 	"net/http"
 )
 
@@ -12,7 +12,7 @@ func (a *App) Router() http.Handler {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
-	r.Use(middleware2.Log(a.logger))
+	r.Use(mw.Log(a.logger))
 
 	//auth := mw.Auth(a.session)
 

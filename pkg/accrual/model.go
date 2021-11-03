@@ -9,5 +9,5 @@ type GetOrderRequest struct {
 type GetOrderResponse struct {
 	Order   string              `json:"order"`
 	Status  string              `json:"status"`
-	Accrual decimal.NullDecimal `json:"accrual"`
+	Accrual decimal.NullDecimal `json:"accrual,omitempty"`
 }
