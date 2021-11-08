@@ -47,7 +47,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if errors.Is(err, apperr.ErrInvalidInput) {
-			l.Debug().Err(err).Msg("Validation error")
+			l.Debug().Err(err).Str("order_id", string(b)).Msg("Validation error")
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
