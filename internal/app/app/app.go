@@ -2,6 +2,7 @@ package app
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"gophermart/internal/app/config"
 	"gophermart/internal/app/logger"
@@ -16,11 +17,12 @@ type App struct {
 	logger  logger.Logger
 	accrual *accrual.Service
 	users   storage.UserRepository
+	orders  storage.OrderRepository
 	session session.Manager
 	stopCh  chan struct{}
 }
 
-func New(cfg config.Config, logger logger.Logger) (*App, error) {
+func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
 	as, err := accrual.NewService(cfg.Accrual.RemoteURL)
 	if err != nil {
 		return nil, err
@@ -35,9 +37,18 @@ func New(cfg config.Config, logger logger.Logger) (*App, error) {
 		return nil, fmt.Errorf("db ping: %w", err)
 	}
 
+	if err := applyMigrations(e, db); err != nil {
+		return nil, fmt.Errorf("db migrate: %w", err)
+	}
+
 	users, err := postgres.NewUserRepository(db)
 	if err != nil {
 		return nil, fmt.Errorf("user repository init: %w", err)
+	}
+
+	orders, err := postgres.NewOrderRepository(db)
+	if err != nil {
+		return nil, fmt.Errorf("order repository init: %w", err)
 	}
 
 	a := &App{
@@ -45,6 +56,7 @@ func New(cfg config.Config, logger logger.Logger) (*App, error) {
 		logger:  logger,
 		stopCh:  make(chan struct{}),
 		users:   users,
+		orders:  orders,
 		session: session.NewMemory(cfg.SecretKey, users),
 		accrual: as,
 	}

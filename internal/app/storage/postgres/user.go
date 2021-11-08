@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgerrcode"
 	pg "github.com/lib/pq"
 	"gophermart/internal/app/apperr"
-	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
 	"gophermart/internal/app/storage"
 )
@@ -28,13 +27,6 @@ func (r *UserRepository) LoggerComponent() string {
 func NewUserRepository(db *sql.DB) (*UserRepository, error) {
 	s := &UserRepository{
 		db: db,
-	}
-
-	log := logger.Global().Component(s)
-	log.Debug().Msg("Creating tables")
-
-	if err := s.createTables(); err != nil {
-		return nil, fmt.Errorf("create tables: %w", err)
 	}
 
 	return s, nil
@@ -100,25 +92,4 @@ func (r *UserRepository) ReadByNameAndPassword(ctx context.Context, name string,
 	}
 
 	return user, nil
-}
-
-func (r *UserRepository) createTables() error {
-	_, _ = r.db.Exec(`DROP TABLE IF EXISTS "users"`)
-	const sqlCreateTable = `
-		CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-		CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-		CREATE TABLE IF NOT EXISTS "users" (
-			id uuid DEFAULT uuid_generate_v4(),
-			created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-			name TEXT NOT NULL UNIQUE,
-			password TEXT NOT NULL,
-		    balance DECIMAL NOT NULL DEFAULT 0
-		);
-`
-
-	if _, err := r.db.Exec(sqlCreateTable); err != nil {
-		return fmt.Errorf("create table: %w", err)
-	}
-
-	return nil
 }

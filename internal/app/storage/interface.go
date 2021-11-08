@@ -15,3 +15,16 @@ type UserRepository interface {
 	// Read instance of model.User
 	Read(ctx context.Context, id uuid.UUID) (*model.User, error)
 }
+
+type OrderRepository interface {
+	// Create a new model.Order
+	Create(ctx context.Context, m *model.Order) (*model.Order, error)
+	// Read instance of model.Order
+	Read(ctx context.Context, id uuid.UUID) (*model.Order, error)
+	// ReadByExternalID instance of model.Order
+	ReadByExternalID(ctx context.Context, externalID string) (*model.Order, error)
+	// Update instance of model.Order
+	Update(ctx context.Context, m *model.Order) (*model.Order, error)
+	// AllByUserID returns all orders of user
+	AllByUserID(ctx context.Context, userID uuid.UUID) ([]*model.Order, error)
+}

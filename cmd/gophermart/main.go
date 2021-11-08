@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"gophermart/internal/app/app"
 	"gophermart/internal/app/config"
@@ -11,6 +12,9 @@ import (
 	"os/signal"
 	"time"
 )
+
+//go:embed migrations/*.sql
+var embedMigrations embed.FS
 
 func main() {
 	// setting up signal capturing
@@ -37,7 +41,7 @@ func main() {
 func runServer(ctx context.Context, c config.Config) (err error) {
 	l := logger.New(c.LogVerbose, c.LogPretty)
 
-	a, err := app.New(c, l)
+	a, err := app.New(c, l, embedMigrations)
 	if err != nil {
 		return fmt.Errorf("app init: %w", err)
 	}

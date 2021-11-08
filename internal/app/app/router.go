@@ -14,14 +14,17 @@ func (a *App) Router() http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(mw.Log(a.logger))
 
-	//auth := mw.Auth(a.session)
+	auth := mw.Auth(a.session)
 
 	// api
 	uh := handler.NewUserHandler(a.users, a.session)
+	oh := handler.NewOrderHandler(a.orders)
 
-	r.Route("/user", func(r chi.Router) {
+	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/login", uh.Login)
 		r.Post("/register", uh.Register)
+		r.With(auth).Post("/orders", oh.Create)
+		r.With(auth).Get("/orders", oh.List)
 	})
 
 	return r
