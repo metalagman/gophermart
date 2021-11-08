@@ -36,6 +36,7 @@ func (h *TransactionHandler) Balance(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		l.Debug().Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	out := struct {
@@ -91,6 +92,7 @@ func (h *TransactionHandler) CreateWithdraw(w http.ResponseWriter, r *http.Reque
 	if err := readBody(r, in); err != nil {
 		l.Debug().Err(err).Msg("Body read failed")
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	m, err := h.transactions.Create(ctx, &model.Transaction{
