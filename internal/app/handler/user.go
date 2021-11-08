@@ -73,6 +73,8 @@ func (h *UserHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Token string `json:"token"`
 	}{token}
 
+	w.Header().Add("Authorization", "Bearer "+token)
+
 	WriteResponse(w, out, http.StatusOK)
 }
 
@@ -112,6 +114,8 @@ func (h *UserHandler) Login(w http.ResponseWriter, r *http.Request) {
 	out := struct {
 		Token string `json:"token"`
 	}{token}
+
+	w.Header().Add("Authorization", "Bearer "+token)
 
 	WriteResponse(w, out, http.StatusOK)
 }

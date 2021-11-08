@@ -12,6 +12,7 @@ func (a *App) Router() http.Handler {
 
 	r := chi.NewRouter()
 	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(5, "gzip"))
 	r.Use(mw.Log(a.logger))
 
 	auth := mw.Auth(a.session)
