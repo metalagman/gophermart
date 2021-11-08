@@ -52,6 +52,7 @@ func WriteResponse(w http.ResponseWriter, v interface{}, statusCode int) {
 		return
 	}
 	w.WriteHeader(statusCode)
+	w.Header().Add("Content-Type", "application/json")
 	_, _ = w.Write(resBody)
 }
 
