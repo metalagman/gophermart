@@ -40,13 +40,14 @@ func (h *TransactionHandler) Balance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := struct {
-		Current   decimal.Decimal
-		Withdrawn decimal.Decimal
+		Current   decimal.Decimal `json:"current"`
+		Withdrawn decimal.Decimal `json:"withdrawn"`
 	}{
 		Current:   u.Balance,
 		Withdrawn: *sum,
 	}
 
+	l.Debug().Msgf("sending balance %s", jsonString(out))
 	WriteResponse(w, out, http.StatusOK)
 }
 
