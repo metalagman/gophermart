@@ -68,7 +68,6 @@ func New(db *sql.DB, ac *accrual.Service) (*Service, error) {
 }
 
 func (s *Service) Start(numWorkers int) {
-	const retryDelay = 100 * time.Millisecond
 	for i := 0; i < numWorkers; i++ {
 		go func(workerID int, l logger.Logger, jobs chan Job, stop chan struct{}) {
 			st := gobreaker.Settings{

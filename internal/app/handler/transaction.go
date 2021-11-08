@@ -133,7 +133,7 @@ func (h *TransactionHandler) CreateWithdrawal(w http.ResponseWriter, r *http.Req
 		ExternalOrderID: om.ExternalID,
 		UserID:          om.UserID,
 		TypeID:          model.TransactionTypeWithdrawal,
-		Amount:          in.Amount,
+		Amount:          in.Amount.Neg(),
 	})
 
 	if err != nil {
