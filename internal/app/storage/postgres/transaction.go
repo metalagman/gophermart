@@ -24,7 +24,7 @@ type TransactionRepository struct {
 
 func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *model.User) (*decimal.Decimal, error) {
 	const SQL = `
-		SELECT sum(amount)
+		SELECT coalesce(sum(amount), 0) as b
 		FROM transactions
 		WHERE type_id=$1 AND user_id=$2
 `
@@ -45,7 +45,7 @@ func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.U
 	l := logger.Ctx(ctx).With().Str("method", "GetWithdrawalSum").Logger()
 	l.Debug().Send()
 	const SQL = `
-		SELECT sum(amount) as b
+		SELECT coalesce(sum(amount), 0) as b
 		FROM transactions
 		WHERE type_id=$1 AND user_id=$2
 `
