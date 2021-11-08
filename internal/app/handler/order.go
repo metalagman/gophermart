@@ -5,6 +5,7 @@ import (
 	"gophermart/internal/app/apperr"
 	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
+	"gophermart/internal/app/service/syncer"
 	"gophermart/internal/app/session"
 	"gophermart/internal/app/storage"
 	"io"
@@ -14,17 +15,19 @@ import (
 type OrderHandler struct {
 	session session.Creator
 	orders  storage.OrderRepository
+	syncer  *syncer.Service
 }
 
-func NewOrderHandler(orders storage.OrderRepository) *OrderHandler {
+func NewOrderHandler(orders storage.OrderRepository, syncer *syncer.Service) *OrderHandler {
 	return &OrderHandler{
 		orders: orders,
+		syncer: syncer,
 	}
 }
 
 func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	l := logger.Get(ctx, "Handler.Order.Create")
+	l := logger.Get(ctx, "Handler.ExternalOrderID.Create")
 	l.Debug().Send()
 
 	u, err := ReadContextUser(ctx)
@@ -75,12 +78,14 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	go h.syncer.Run(h.syncer.FetchOrderDetails(m.ID))
+
 	w.WriteHeader(http.StatusAccepted)
 }
 
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	l := logger.Get(ctx, "Handler.Order.List")
+	l := logger.Get(ctx, "Handler.ExternalOrderID.List")
 	l.Debug().Send()
 
 	u, err := ReadContextUser(ctx)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gophermart/internal/app/config"
 	"gophermart/internal/app/logger"
+	"gophermart/internal/app/service/syncer"
 	"gophermart/internal/app/session"
 	"gophermart/internal/app/storage"
 	"gophermart/internal/app/storage/postgres"
@@ -20,6 +21,7 @@ type App struct {
 	orders  storage.OrderRepository
 	session session.Manager
 	stopCh  chan struct{}
+	syncer  *syncer.Service
 }
 
 func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
@@ -51,6 +53,11 @@ func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
 		return nil, fmt.Errorf("order repository init: %w", err)
 	}
 
+	syncer, err := syncer.New(db, as)
+	if err != nil {
+		return nil, fmt.Errorf("accryalsync init: %w", err)
+	}
+
 	a := &App{
 		config:  cfg,
 		logger:  logger,
@@ -59,11 +66,13 @@ func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
 		orders:  orders,
 		session: session.NewMemory(cfg.SecretKey, users),
 		accrual: as,
+		syncer:  syncer,
 	}
 
 	go func() {
 		<-a.stopCh
 		a.logger.Info().Msg("Shutting down application")
+		syncer.Stop()
 	}()
 
 	return a, nil
