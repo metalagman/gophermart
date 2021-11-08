@@ -47,6 +47,7 @@ func WithLogger(l zerolog.Logger) ServiceOption {
 func (s *Service) GetOrder(ctx context.Context, in *GetOrderRequest, out *GetOrderResponse) error {
 	l := s.logger.With().
 		Str("method", "GetOrder").
+		Str("order_id", in.ExternalOrderID).
 		Logger()
 	ctx = l.WithContext(ctx)
 
@@ -54,6 +55,11 @@ func (s *Service) GetOrder(ctx context.Context, in *GetOrderRequest, out *GetOrd
 	if err != nil {
 		return err
 	}
+
+	l.Debug().
+		Str("order_status", out.Status).
+		Str("order_accrual", fmt.Sprintf("%+v", out.Accrual)).
+		Msg("GetOrder success")
 
 	return nil
 }
