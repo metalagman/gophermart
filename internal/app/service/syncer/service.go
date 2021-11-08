@@ -139,6 +139,8 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 		defer cancel()
 		ctx = l.WithContext(ctx)
 
+		l.Debug().Msg("Starting transaction")
+
 		tx, err := s.db.BeginTx(ctx, &sql.TxOptions{
 			Isolation: sql.LevelSerializable,
 		})
@@ -146,6 +148,9 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 			l.Error().Err(err).Msg("DB transaction begin")
 			return err
 		}
+
+		l.Debug().Msg("Locking user balance")
+
 		var oldStatus, externalID string
 		var userID uuid.UUID
 		const sqlLock = `SELECT status, external_id, user_id FROM orders WHERE id=$1 FOR UPDATE`
@@ -168,6 +173,8 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 			return err
 		}
 
+		l.Debug().Msg("Updating order status")
+
 		const sqlUpdate = `UPDATE orders SET status=$1, accrual=$2 WHERE id=$3`
 		_, err = tx.ExecContext(ctx, sqlUpdate, out.Status, out.Accrual, id)
 		if err != nil {
@@ -177,6 +184,7 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 		}
 
 		if oldStatus != out.Status && out.Status == statusProcessed && out.Accrual.Valid {
+			l.Debug().Msg("Updating balance")
 			const sqlTx = `INSERT INTO transactions (type_id, user_id, order_id, external_order_id, amount) VALUES ($1, $2, $3, $4, $5)`
 			_, err = tx.ExecContext(ctx, sqlTx, model.TransactionTypeReplenishment, userID, id, externalID, out.Accrual)
 			if err != nil {
@@ -194,6 +202,7 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 			}
 		}
 
+		l.Debug().Msg("Commit transaction")
 		if err := tx.Commit(); err != nil {
 			l.Error().Err(err).Msg("TX commit failed")
 			return err
