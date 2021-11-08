@@ -57,7 +57,10 @@ func (r *OrderRepository) Create(ctx context.Context, m *model.Order) (*model.Or
 
 // TxCreate implementation of interface storage.OrderRepository
 func (r *OrderRepository) TxCreate(ctx context.Context, tx *sql.Tx, m *model.Order) (*model.Order, error) {
+	l := logger.Ctx(ctx).With().Str("method", "TxCreate").Logger()
+
 	if m.ExternalID == "" || !luhn.Valid(m.ExternalID) {
+		l.Debug().Str("external_order_id", m.ExternalID).Bool("luhn_valid", luhn.Valid(m.ExternalID)).Send()
 		return nil, apperr.ErrInvalidInput
 	}
 
@@ -73,15 +76,19 @@ func (r *OrderRepository) TxCreate(ctx context.Context, tx *sql.Tx, m *model.Ord
 			if pgerrcode.IsIntegrityConstraintViolation(string(pgErr.Code)) {
 				em, err := r.ReadByExternalID(ctx, m.ExternalID)
 				if err != nil {
+					l.Debug().Err(err).Str("user_id", m.UserID.String()).Msg("Existing not found")
 					return nil, err
 				}
-				if em.UserID == m.UserID {
+				if em.UserID.String() == m.UserID.String() {
+					l.Debug().Str("existing_user_id", em.UserID.String()).Str("user_id", m.UserID.String()).Msg("Soft conflict")
 					return nil, apperr.ErrSoftConflict
 				}
+				l.Debug().Str("existing_user_id", em.UserID.String()).Str("user_id", m.UserID.String()).Msg("Hard conflict")
 				return nil, apperr.ErrConflict
 			}
 		}
 
+		l.Error().Err(err).Msg("Unknown error")
 		return nil, fmt.Errorf("insert: %w", err)
 	}
 
