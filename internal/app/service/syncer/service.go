@@ -177,8 +177,8 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 		}
 
 		if oldStatus != out.Status && out.Status == statusProcessed && out.Accrual.Valid {
-			const sqlTx = `INSERT INTO transactions (type_id, user_id, order_id, amount) VALUES ($1, $2, $3, $4)`
-			_, err = tx.ExecContext(ctx, sqlTx, model.TransactionTypeReplenishment, userID, id, out.Accrual)
+			const sqlTx = `INSERT INTO transactions (type_id, user_id, order_id, external_order_id, amount) VALUES ($1, $2, $3, $4, $5)`
+			_, err = tx.ExecContext(ctx, sqlTx, model.TransactionTypeReplenishment, userID, id, externalID, out.Accrual)
 			if err != nil {
 				l.Error().Err(err).Msg("TX insert failed")
 				_ = tx.Rollback()

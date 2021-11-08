@@ -20,12 +20,16 @@ func (a *App) Router() http.Handler {
 	// api
 	uh := handler.NewUserHandler(a.users, a.session)
 	oh := handler.NewOrderHandler(a.orders, a.syncer)
+	th := handler.NewTransactionHandler(a.transactions)
 
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/login", uh.Login)
 		r.Post("/register", uh.Register)
 		r.With(auth).Post("/orders", oh.Create)
 		r.With(auth).Get("/orders", oh.List)
+		r.With(auth).Get("/balance", th.Balance)
+		r.With(auth).Get("/balance/withdrawals", th.ListWithdrawals)
+		r.With(auth).Post("/balance/withdraw", th.CreateWithdraw)
 	})
 
 	return r

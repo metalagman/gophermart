@@ -4,6 +4,7 @@ package storage
 import (
 	"context"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 	"gophermart/internal/app/model"
 )
 
@@ -27,4 +28,15 @@ type OrderRepository interface {
 	Update(ctx context.Context, m *model.Order) (*model.Order, error)
 	// AllByUserID returns all orders of user
 	AllByUserID(ctx context.Context, userID uuid.UUID) ([]*model.Order, error)
+}
+
+type TransactionRepository interface {
+	// GetReplenishmentSum for user
+	GetReplenishmentSum(ctx context.Context, m *model.User) (*decimal.Decimal, error)
+	// GetWithdrawalSum for user
+	GetWithdrawalSum(ctx context.Context, m *model.User) (*decimal.Decimal, error)
+	// GetWithdrawals for user
+	GetWithdrawals(ctx context.Context, m *model.User) ([]*model.Transaction, error)
+	// Create a new model.Transaction
+	Create(ctx context.Context, m *model.Transaction) (*model.Transaction, error)
 }

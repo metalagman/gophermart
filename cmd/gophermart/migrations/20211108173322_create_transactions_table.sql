@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS "transactions" (
     type_id smallint NOT NULL,
     user_id uuid NOT NULL,
     order_id uuid NOT NULL,
+    external_order_id text NOT NULL,
     amount DECIMAL NOT NULL,
     PRIMARY KEY(id),
     CONSTRAINT fk_order

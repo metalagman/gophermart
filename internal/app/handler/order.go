@@ -85,7 +85,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	l := logger.Get(ctx, "Handler.ExternalOrderID.List")
+	l := logger.Get(ctx, "Handler.Order.List")
 	l.Debug().Send()
 
 	u, err := ReadContextUser(ctx)

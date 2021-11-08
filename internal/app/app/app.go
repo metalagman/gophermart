@@ -14,14 +14,15 @@ import (
 )
 
 type App struct {
-	config  config.Config
-	logger  logger.Logger
-	accrual *accrual.Service
-	users   storage.UserRepository
-	orders  storage.OrderRepository
-	session session.Manager
-	stopCh  chan struct{}
-	syncer  *syncer.Service
+	config       config.Config
+	logger       logger.Logger
+	accrual      *accrual.Service
+	users        storage.UserRepository
+	orders       storage.OrderRepository
+	transactions storage.TransactionRepository
+	session      session.Manager
+	stopCh       chan struct{}
+	syncer       *syncer.Service
 }
 
 func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
@@ -53,26 +54,32 @@ func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
 		return nil, fmt.Errorf("order repository init: %w", err)
 	}
 
-	syncer, err := syncer.New(db, as)
+	transactions, err := postgres.NewTransactionRepository(db)
+	if err != nil {
+		return nil, fmt.Errorf("transaction repository init: %w", err)
+	}
+
+	s, err := syncer.New(db, as)
 	if err != nil {
 		return nil, fmt.Errorf("accryalsync init: %w", err)
 	}
 
 	a := &App{
-		config:  cfg,
-		logger:  logger,
-		stopCh:  make(chan struct{}),
-		users:   users,
-		orders:  orders,
-		session: session.NewMemory(cfg.SecretKey, users),
-		accrual: as,
-		syncer:  syncer,
+		config:       cfg,
+		logger:       logger,
+		stopCh:       make(chan struct{}),
+		users:        users,
+		orders:       orders,
+		transactions: transactions,
+		session:      session.NewMemory(cfg.SecretKey, users),
+		accrual:      as,
+		syncer:       s,
 	}
 
 	go func() {
 		<-a.stopCh
 		a.logger.Info().Msg("Shutting down application")
-		syncer.Stop()
+		s.Stop()
 	}()
 
 	return a, nil
