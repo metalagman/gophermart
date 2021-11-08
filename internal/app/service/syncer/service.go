@@ -193,7 +193,7 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 				return err
 			}
 
-			const sqlUpdateBalance = `UPDATE users SET balance=balance+$1 WHERE id=$2`
+			const sqlUpdateBalance = `UPDATE users SET balance=balance + $1 WHERE id = $2`
 			_, err = tx.ExecContext(ctx, sqlUpdateBalance, out.Accrual, userID)
 			if err != nil {
 				l.Error().Err(err).Msg("Balance update failed")
