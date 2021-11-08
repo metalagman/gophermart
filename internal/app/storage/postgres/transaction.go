@@ -28,7 +28,7 @@ func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *mode
 		FROM transactions
 		WHERE type_id=$1 && user_id=$2
 `
-	sum := new(decimal.Decimal)
+	sum := decimal.NewFromInt(0)
 
 	err := r.db.QueryRowContext(ctx, SQL, model.TransactionTypeReplenishment).Scan(&sum, &m.ID)
 	if err != nil {
@@ -38,7 +38,7 @@ func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *mode
 		return nil, fmt.Errorf("select: %w", err)
 	}
 
-	return sum, nil
+	return &sum, nil
 }
 
 func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.User) (*decimal.Decimal, error) {
@@ -47,7 +47,7 @@ func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.U
 		FROM transactions
 		WHERE type_id=$1 && user_id=$2
 `
-	sum := new(decimal.Decimal)
+	sum := decimal.NewFromInt(0)
 
 	err := r.db.QueryRowContext(ctx, SQL, model.TransactionTypeWithdrawal, m.ID).Scan(&sum, &m.ID)
 	if err != nil {
@@ -57,7 +57,7 @@ func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.U
 		return nil, fmt.Errorf("select: %w", err)
 	}
 
-	return sum, nil
+	return &sum, nil
 }
 
 func (r *TransactionRepository) GetWithdrawals(ctx context.Context, m *model.User) ([]*model.Transaction, error) {
@@ -69,15 +69,14 @@ func (r *TransactionRepository) GetWithdrawals(ctx context.Context, m *model.Use
 		WHERE type_id=$1 && user_id=$2
 		ORDER BY created_at DESC
 `
+	res := make([]*model.Transaction, 0)
 	rows, err := r.db.QueryContext(ctx, SQL, model.TransactionTypeWithdrawal, m.ID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, nil
+			return res, nil
 		}
 		return nil, fmt.Errorf("select: %w", err)
 	}
-
-	res := make([]*model.Transaction, 0)
 
 	for rows.Next() {
 		m := &model.Transaction{}
