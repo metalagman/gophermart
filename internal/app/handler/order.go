@@ -2,6 +2,7 @@ package handler
 
 import (
 	"errors"
+	"github.com/google/uuid"
 	"gophermart/internal/app/apperr"
 	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
@@ -10,6 +11,7 @@ import (
 	"gophermart/internal/app/storage"
 	"io"
 	"net/http"
+	"time"
 )
 
 type OrderHandler struct {
@@ -44,6 +46,8 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	m, err := h.orders.Create(ctx, &model.Order{
+		ID:         uuid.New(),
+		CreatedAt:  time.Now(),
 		ExternalID: string(b),
 		UserID:     u.ID,
 	})
@@ -95,17 +99,19 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	posts, err := h.orders.AllByUserID(ctx, u.ID)
+	mm, err := h.orders.AllByUserID(ctx, u.ID)
 	if err != nil {
 		l.Debug().Err(err).Send()
 		WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
 
-	if len(posts) == 0 {
+	if len(mm) == 0 {
 		WriteResponse(w, struct{}{}, http.StatusNoContent)
 		return
 	}
 
-	WriteResponse(w, posts, http.StatusOK)
+	l.Debug().Msgf("models: %#v", mm)
+
+	WriteResponse(w, mm, http.StatusOK)
 }
