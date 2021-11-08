@@ -68,7 +68,7 @@ func (r *TransactionRepository) GetWithdrawals(ctx context.Context, m *model.Use
 	const SQL = `
 		SELECT created_at, external_order_id, amount
 		FROM transactions
-		WHERE type_id=$1 && user_id=$2
+		WHERE type_id=$1 AND user_id=$2
 		ORDER BY created_at DESC
 `
 	res := make([]*model.Transaction, 0)
