@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgerrcode"
 	pg "github.com/lib/pq"
 	"gophermart/internal/app/apperr"
+	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
 	"gophermart/internal/app/storage"
 )
@@ -121,6 +122,8 @@ func (r *OrderRepository) Update(ctx context.Context, m *model.Order) (*model.Or
 }
 
 func (r *OrderRepository) AllByUserID(ctx context.Context, userID uuid.UUID) ([]*model.Order, error) {
+	l := logger.Ctx(ctx).With().Str("method", "AllByUserID").Logger()
+
 	const SQL = `
 		SELECT id, external_id, created_at, user_id, status, accrual
 		FROM orders 
@@ -130,6 +133,7 @@ func (r *OrderRepository) AllByUserID(ctx context.Context, userID uuid.UUID) ([]
 	rows, err := r.db.QueryContext(ctx, SQL, userID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
+			l.Debug().Err(err).Send()
 			return nil, apperr.ErrNotFound
 		}
 		return nil, fmt.Errorf("select: %w", err)
@@ -143,6 +147,7 @@ func (r *OrderRepository) AllByUserID(ctx context.Context, userID uuid.UUID) ([]
 	for rows.Next() {
 		m := &model.Order{}
 		if err := rows.Scan(&m.ID, &m.ExternalID, &m.CreatedAt, &m.UserID, &m.Status, &m.Accrual); err != nil {
+			l.Debug().Err(err).Send()
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 		res = append(res, m)
