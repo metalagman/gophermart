@@ -43,6 +43,7 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		l.Debug().Err(err).Msg("Body read failed")
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
 	}
 
 	m, err := h.orders.Create(ctx, &model.Order{
