@@ -150,6 +150,7 @@ func (r *OrderRepository) AllByUserID(ctx context.Context, userID uuid.UUID) ([]
 			l.Debug().Err(err).Send()
 			return nil, fmt.Errorf("scan: %w", err)
 		}
+		l.Debug().Msgf("order: %#v", *m)
 		res = append(res, m)
 	}
 
