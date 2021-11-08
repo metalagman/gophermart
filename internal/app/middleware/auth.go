@@ -18,14 +18,14 @@ func Auth(jwt session.Reader) func(next http.Handler) http.Handler {
 			reqHeader := r.Header.Get("Authorization")
 			splitToken := strings.Split(reqHeader, "Bearer ")
 			if len(splitToken) != 2 {
-				l.Debug().Str("header", reqHeader).Msg("Invalid Authorization header")
+				l.Debug().Str("auth_header", reqHeader).Msg("Invalid Authorization header")
 				handler.WriteError(w, apperr.ErrUnauthorized, http.StatusUnauthorized)
 				return
 			}
 
 			u, err := jwt.Read(r.Context(), splitToken[1])
 			if err != nil {
-				l.Debug().Err(err).Msg("Token validation failed")
+				l.Debug().Err(err).Str("auth_header", reqHeader).Msg("JWT read failed")
 				handler.WriteError(w, apperr.ErrUnauthorized, http.StatusUnauthorized)
 				return
 			}

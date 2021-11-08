@@ -99,7 +99,7 @@ func (svc *Memory) Create(ctx context.Context, u *model.User) (string, error) {
 // Read method of session.Reader implementation
 func (svc *Memory) Read(ctx context.Context, tokenString string) (*model.User, error) {
 	l := logger.Get(ctx, svc)
-	//l.Debug().Msg("Read request")
+	l.Debug().Msg("Read request")
 
 	c := &Claims{}
 
@@ -108,14 +108,14 @@ func (svc *Memory) Read(ctx context.Context, tokenString string) (*model.User, e
 	})
 
 	if err != nil {
-		//l.Debug().Err(err).Msg("ParseWithClaims failed")
+		l.Debug().Err(err).Msg("ParseWithClaims failed")
 
 		return nil, ErrInvalidToken
 	}
 
 	c, ok := token.Claims.(*Claims)
 	if !ok || !token.Valid {
-		//l.Debug().Str("token", tokenString).Msg("Invalid token")
+		l.Debug().Str("token", tokenString).Msg("Invalid token")
 
 		return nil, ErrInvalidToken
 	}
@@ -125,16 +125,16 @@ func (svc *Memory) Read(ctx context.Context, tokenString string) (*model.User, e
 
 	s, ok := svc.db[c.StandardClaims.Id]
 	if !ok {
-		//l.Debug().Msg("MemorySession not found")
+		l.Debug().Msg("MemorySession not found")
 
 		return nil, ErrInvalidToken
 	}
 
 	if s.ExpiresAt.Before(time.Now()) {
-		//l.Debug().
-		//	Str("session_id", c.StandardClaims.Id).
-		//	Str("user_id", s.UserID.String()).
-		//	Msg("Session expired")
+		l.Debug().
+			Str("session_id", c.StandardClaims.Id).
+			Str("user_id", s.UserID.String()).
+			Msg("Session expired")
 		delete(svc.db, c.StandardClaims.Id)
 
 		return nil, ErrInvalidToken
