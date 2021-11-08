@@ -47,11 +47,11 @@ func (h *TransactionHandler) Balance(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := struct {
-		Current   float64 `json:"current"`
-		Withdrawn float64 `json:"withdrawn"`
+		Current   decimal.Decimal `json:"current"`
+		Withdrawn decimal.Decimal `json:"withdrawn"`
 	}{
-		Current:   u.Balance.InexactFloat64(),
-		Withdrawn: sum.InexactFloat64(),
+		Current:   u.Balance,
+		Withdrawn: sum.Neg(),
 	}
 
 	l.Debug().Msgf("sending balance %s", jsonString(out))
