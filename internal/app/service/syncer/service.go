@@ -14,7 +14,10 @@ import (
 )
 
 const (
-	statusProcessed = "PROCESSED"
+	statusRegistered = "REGISTERED"
+	statusInvalid    = "INVALID"
+	statusProcessing = "PROCESSING"
+	statusProcessed  = "PROCESSED"
 )
 
 var ErrRetryableError = errors.New("retryable")
@@ -31,16 +34,32 @@ type Service struct {
 	stopCh  chan struct{}
 
 	fetchInterval time.Duration
+	jobTimeout    time.Duration
+}
+
+func (s *Service) JobTimeout() time.Duration {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.jobTimeout
+}
+
+func (s *Service) SetJobTimeout(jobTimeout time.Duration) {
+	s.mu.Lock()
+	defer s.mu.Lock()
+	s.jobTimeout = jobTimeout
 }
 
 func New(db *sql.DB, ac *accrual.Service) (*Service, error) {
 	s := &Service{
-		logger:        logger.Global().WithComponent("AccrualSync.Service"),
-		fetchInterval: 5 * time.Second,
-		jobs:          make(chan Job),
-		stopCh:        make(chan struct{}),
-		accrual:       ac,
-		db:            db,
+		logger: logger.Global().WithComponent("AccrualSync.Service"),
+
+		jobs:    make(chan Job),
+		stopCh:  make(chan struct{}),
+		accrual: ac,
+		db:      db,
+
+		fetchInterval: 1 * time.Second,
+		jobTimeout:    30 * time.Second,
 	}
 	s.Start(runtime.GOMAXPROCS(0))
 
@@ -48,7 +67,7 @@ func New(db *sql.DB, ac *accrual.Service) (*Service, error) {
 }
 
 func (s *Service) Start(numWorkers int) {
-	const retryDelay = time.Second
+	const retryDelay = 100 * time.Millisecond
 	for i := 0; i < numWorkers; i++ {
 		go func(workerID int, l logger.Logger, jobs chan Job, stop chan struct{}) {
 			for {
@@ -58,11 +77,13 @@ func (s *Service) Start(numWorkers int) {
 					return
 				case job, ok := <-jobs:
 					if !ok {
+
 						return
 					}
 					id := uuid.New()
 					ll := l.With().Int("worker_id", workerID).Str("job_id", id.String()).Logger()
 					ll.Info().Msg("Running job")
+
 					if err := job(); err != nil {
 						ll.Error().Msg("Job failed")
 						go func() {
@@ -72,6 +93,7 @@ func (s *Service) Start(numWorkers int) {
 						}()
 						continue
 					}
+
 					ll.Info().Msg("Job done")
 				}
 			}
@@ -87,7 +109,7 @@ func (s *Service) Start(numWorkers int) {
 				return
 			case <-t.C:
 				l.Info().Msg("Fetching statuses")
-				//s.jobs <- s.fetchStatuses()
+				s.jobs <- s.FetchAll()
 				t.Reset(fetchInterval)
 			}
 		}
@@ -107,12 +129,11 @@ func (s *Service) Run(job Job) {
 }
 
 func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
-	timeout := time.Second * 30
 	return func() error {
 		l := s.logger.WithComponent("AccrualSync.Job.FetchOrderDetails")
 		l.Debug().Msg("Fetching status")
 
-		ctx, cancel := context.WithTimeout(context.Background(), timeout)
+		ctx, cancel := context.WithTimeout(context.Background(), s.JobTimeout())
 		defer cancel()
 		ctx = l.WithContext(ctx)
 
@@ -178,6 +199,49 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 
 		dur := time.Now().Sub(now)
 		l.Debug().Dur("duration", dur).Msg("Done fetching status")
+
+		return nil
+	}
+}
+
+func (s *Service) FetchAll() Job {
+	return func() error {
+		l := s.logger.WithComponent("AccrualSync.Job.FetchAll")
+		l.Debug().Msg("Fetching status")
+
+		ctx, cancel := context.WithTimeout(context.Background(), s.JobTimeout())
+		defer cancel()
+		ctx = l.WithContext(ctx)
+
+		tx, err := s.db.BeginTx(ctx, &sql.TxOptions{
+			Isolation: sql.LevelReadCommitted,
+		})
+		if err != nil {
+			l.Error().Err(err).Msg("DB transaction begin")
+			return err
+		}
+		defer func(tx *sql.Tx) {
+			_ = tx.Rollback()
+		}(tx)
+
+		const sqlRead = `SELECT id FROM orders WHERE status in ($1, $2)`
+
+		rows, err := tx.QueryContext(ctx, sqlRead, statusRegistered, statusProcessing)
+		if err != nil {
+			l.Error().Err(err).Msg("DB select")
+			_ = tx.Rollback()
+			return err
+		}
+		defer func(rows *sql.Rows) {
+			_ = rows.Close()
+		}(rows)
+
+		var id uuid.UUID
+		for rows.Next() {
+			if err := rows.Scan(&id); err != nil {
+				go s.Run(s.FetchOrderDetails(id))
+			}
+		}
 
 		return nil
 	}
