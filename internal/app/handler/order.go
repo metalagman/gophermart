@@ -97,6 +97,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	posts, err := h.orders.AllByUserID(ctx, u.ID)
 	if err != nil {
+		l.Debug().Err(err).Send()
 		WriteError(w, err, http.StatusInternalServerError)
 		return
 	}
