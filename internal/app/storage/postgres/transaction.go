@@ -30,10 +30,10 @@ func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *mode
 `
 	sum := decimal.NewFromInt(0)
 
-	err := r.db.QueryRowContext(ctx, SQL, model.TransactionTypeReplenishment).Scan(&sum, &m.ID)
+	err := r.db.QueryRowContext(ctx, SQL, model.TransactionTypeReplenishment, m.ID).Scan(&sum)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperr.ErrNotFound
+			return &sum, nil
 		}
 		return nil, fmt.Errorf("select: %w", err)
 	}
@@ -49,10 +49,10 @@ func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.U
 `
 	sum := decimal.NewFromInt(0)
 
-	err := r.db.QueryRowContext(ctx, SQL, model.TransactionTypeWithdrawal, m.ID).Scan(&sum, &m.ID)
+	err := r.db.QueryRowContext(ctx, SQL, model.TransactionTypeWithdrawal, m.ID).Scan(&sum)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, apperr.ErrNotFound
+			return &sum, nil
 		}
 		return nil, fmt.Errorf("select: %w", err)
 	}
