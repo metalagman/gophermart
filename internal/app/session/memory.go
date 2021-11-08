@@ -147,7 +147,7 @@ func (svc *Memory) Read(ctx context.Context, tokenString string) (*model.User, e
 		return nil, ErrInvalidToken
 	}
 
-	l.Debug().Msgf("user %s balance: %f", u.ID, u.Balance)
+	l.Debug().Msgf("user %s balance: %v", u.ID, u.Balance)
 
 	return u, nil
 }
