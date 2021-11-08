@@ -59,7 +59,7 @@ func New(db *sql.DB, ac *accrual.Service) (*Service, error) {
 		accrual: ac,
 		db:      db,
 
-		fetchInterval: 200 * time.Millisecond,
+		fetchInterval: 1000 * time.Millisecond,
 		jobTimeout:    30 * time.Second,
 	}
 	s.Start(runtime.GOMAXPROCS(0))
