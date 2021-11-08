@@ -75,6 +75,7 @@ func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {
 		session:      session.NewMemory(cfg.SecretKey, users),
 		accrual:      as,
 		syncer:       s,
+		db:           db,
 	}
 
 	go func() {

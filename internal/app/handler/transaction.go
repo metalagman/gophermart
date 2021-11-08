@@ -104,7 +104,7 @@ func (h *TransactionHandler) CreateWithdrawal(w http.ResponseWriter, r *http.Req
 	}
 
 	tx, err := h.db.BeginTx(ctx, &sql.TxOptions{
-		Isolation: sql.LevelDefault,
+		Isolation: sql.LevelSerializable,
 	})
 	if err := readBody(r, in); err != nil {
 		l.Error().Err(err).Send()
