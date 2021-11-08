@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"github.com/shopspring/decimal"
 	"gophermart/internal/app/app"
 	"gophermart/internal/app/config"
 	"gophermart/internal/app/logger"
@@ -17,6 +18,8 @@ import (
 var embedMigrations embed.FS
 
 func main() {
+	decimal.MarshalJSONWithoutQuotes = true
+
 	// setting up signal capturing
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
