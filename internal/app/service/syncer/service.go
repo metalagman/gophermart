@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"github.com/google/uuid"
+	"github.com/sony/gobreaker"
 	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
 	"gophermart/pkg/accrual"
@@ -70,6 +71,11 @@ func (s *Service) Start(numWorkers int) {
 	const retryDelay = 100 * time.Millisecond
 	for i := 0; i < numWorkers; i++ {
 		go func(workerID int, l logger.Logger, jobs chan Job, stop chan struct{}) {
+			st := gobreaker.Settings{
+				MaxRequests: 3,
+				Interval:    100 * time.Millisecond,
+				Timeout:     s.JobTimeout(),
+			}
 			for {
 				select {
 				case <-stop:
@@ -77,23 +83,19 @@ func (s *Service) Start(numWorkers int) {
 					return
 				case job, ok := <-jobs:
 					if !ok {
-
 						return
 					}
+					cb := gobreaker.NewCircuitBreaker(st)
 					id := uuid.New()
 					ll := l.With().Int("worker_id", workerID).Str("job_id", id.String()).Logger()
 					ll.Info().Msg("Running job")
-
-					if err := job(); err != nil {
+					_, err := cb.Execute(func() (interface{}, error) {
+						return nil, job()
+					})
+					if err != nil {
 						ll.Error().Msg("Job failed")
-						go func() {
-							ll.Info().Msg("Retrying job")
-							time.Sleep(retryDelay)
-							jobs <- job
-						}()
 						continue
 					}
-
 					ll.Info().Msg("Job done")
 				}
 			}
