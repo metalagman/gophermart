@@ -106,11 +106,6 @@ func (h *TransactionHandler) CreateWithdrawal(w http.ResponseWriter, r *http.Req
 	tx, err := h.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	})
-	if err := readBody(r, in); err != nil {
-		l.Error().Err(err).Send()
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
 
 	om, err := h.orders.TxCreate(ctx, tx, &model.Order{
 		ID:         uuid.New(),
