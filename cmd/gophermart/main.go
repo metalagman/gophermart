@@ -32,6 +32,7 @@ func main() {
 	if err := c.Load(); err != nil {
 		logger.Global().Err(err).Msg("Config load failed")
 	}
+	c.LogVerbose = true
 
 	if err := runServer(ctx, c); err != nil {
 		logger.Global().Fatal().Err(err).Msg("Server run failed")
