@@ -228,6 +228,9 @@ func (s *Service) FetchAll() Job {
 
 		rows, err := tx.QueryContext(ctx, sqlRead, statusRegistered, statusProcessing)
 		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return nil
+			}
 			l.Error().Err(err).Msg("DB select")
 			_ = tx.Rollback()
 			return err

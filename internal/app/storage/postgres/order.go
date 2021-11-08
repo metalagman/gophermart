@@ -142,8 +142,8 @@ func (r *OrderRepository) AllByUserID(ctx context.Context, userID uuid.UUID) ([]
 
 	for rows.Next() {
 		m := &model.Order{}
-		if err := rows.Scan(&m.ID, &m.ExternalID, m.CreatedAt, m.UserID, m.Status, m.Accrual); err != nil {
-			return nil, err
+		if err := rows.Scan(&m.ID, &m.ExternalID, &m.CreatedAt, &m.UserID, &m.Status, &m.Accrual); err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
 		}
 		res = append(res, m)
 	}
