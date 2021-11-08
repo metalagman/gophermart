@@ -112,7 +112,7 @@ func (h *OrderHandler) List(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	l.Debug().Msgf("models: %+v", mm)
+	l.Debug().Msgf("models: %#v", mm)
 
 	WriteResponse(w, mm, http.StatusOK)
 }
