@@ -126,7 +126,7 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 		var oldStatus, externalID string
 		var userID uuid.UUID
 		const sqlLock = `SELECT status, external_id, user_id FROM orders WHERE id=$1 FOR UPDATE`
-		if err := tx.QueryRowContext(ctx, sqlLock, id).Scan(&oldStatus, externalID, userID); err != nil {
+		if err := tx.QueryRowContext(ctx, sqlLock, id).Scan(&oldStatus, &externalID, &userID); err != nil {
 			l.Error().Err(err).Msg("DB lock error")
 			_ = tx.Rollback()
 			return err
