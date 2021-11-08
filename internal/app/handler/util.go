@@ -27,6 +27,14 @@ func readBody(r *http.Request, v interface{}) error {
 	return nil
 }
 
+func jsonString(v interface{}) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 type jsonError struct {
 	Message string `json:"error"`
 }
