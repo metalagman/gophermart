@@ -109,7 +109,7 @@ func (s *Service) Run(job Job) {
 func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 	timeout := time.Second * 30
 	return func() error {
-		l := s.logger.WithComponent("AccrualSync.Job.FetchStatus")
+		l := s.logger.WithComponent("AccrualSync.Job.FetchOrderDetails")
 		l.Debug().Msg("Fetching status")
 
 		ctx, cancel := context.WithTimeout(context.Background(), timeout)

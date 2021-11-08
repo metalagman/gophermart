@@ -50,7 +50,7 @@ func (s *Service) GetOrder(ctx context.Context, in *GetOrderRequest, out *GetOrd
 		Logger()
 	ctx = l.WithContext(ctx)
 
-	err := s.genericCall(ctx, http.MethodGet, fmt.Sprintf("/api/orders/%s", in.Order), nil, out)
+	err := s.genericCall(ctx, http.MethodGet, fmt.Sprintf("/api/orders/%s", in.ExternalOrderID), nil, out)
 	if err != nil {
 		return err
 	}
