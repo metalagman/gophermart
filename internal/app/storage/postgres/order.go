@@ -97,7 +97,7 @@ func (r *OrderRepository) Read(ctx context.Context, id uuid.UUID) (*model.Order,
 `
 	m := &model.Order{}
 
-	err := r.db.QueryRowContext(ctx, SQL, id).Scan(&m.ID, &m.ExternalID, m.CreatedAt, m.UserID, m.Status, m.Accrual)
+	err := r.db.QueryRowContext(ctx, SQL, id).Scan(&m.ID, &m.ExternalID, &m.CreatedAt, &m.UserID, &m.Status, &m.Accrual)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperr.ErrNotFound
@@ -117,7 +117,7 @@ func (r *OrderRepository) ReadByExternalID(ctx context.Context, externalID strin
 `
 	m := &model.Order{}
 
-	err := r.db.QueryRowContext(ctx, SQL, externalID).Scan(&m.ID, &m.ExternalID, m.CreatedAt, m.UserID, m.Status, m.Accrual)
+	err := r.db.QueryRowContext(ctx, SQL, externalID).Scan(&m.ID, &m.ExternalID, &m.CreatedAt, &m.UserID, &m.Status, &m.Accrual)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperr.ErrNotFound
