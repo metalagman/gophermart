@@ -73,9 +73,9 @@ func (h *TransactionHandler) ListWithdrawals(w http.ResponseWriter, r *http.Requ
 	WriteResponse(w, mm, http.StatusOK)
 }
 
-func (h *TransactionHandler) CreateWithdraw(w http.ResponseWriter, r *http.Request) {
+func (h *TransactionHandler) CreateWithdrawal(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
-	l := logger.Get(ctx, "Handler.Transaction.CreateWithdraw")
+	l := logger.Get(ctx, "Handler.Transaction.CreateWithdrawal")
 	l.Debug().Send()
 
 	u, err := ReadContextUser(ctx)

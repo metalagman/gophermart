@@ -26,7 +26,7 @@ func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *mode
 	const SQL = `
 		SELECT sum(amount)
 		FROM transactions
-		WHERE type_id=$1 && user_id=$2
+		WHERE type_id=$1 AND user_id=$2
 `
 	sum := decimal.NewFromInt(0)
 
@@ -42,10 +42,12 @@ func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *mode
 }
 
 func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.User) (*decimal.Decimal, error) {
+	l := logger.Ctx(ctx).With().Str("method", "GetWithdrawalSum").Logger()
+	l.Debug().Send()
 	const SQL = `
-		SELECT sum(amount)
+		SELECT sum(amount) as b
 		FROM transactions
-		WHERE type_id=$1 && user_id=$2
+		WHERE type_id=$1 AND user_id=$2
 `
 	sum := decimal.NewFromInt(0)
 
@@ -61,7 +63,7 @@ func (r *TransactionRepository) GetWithdrawalSum(ctx context.Context, m *model.U
 }
 
 func (r *TransactionRepository) GetWithdrawals(ctx context.Context, m *model.User) ([]*model.Transaction, error) {
-	l := logger.Ctx(ctx).With().Str("method", "GetWithdrawalSum").Logger()
+	l := logger.Ctx(ctx).With().Str("method", "GetWithdrawals").Logger()
 
 	const SQL = `
 		SELECT created_at, external_order_id, amount

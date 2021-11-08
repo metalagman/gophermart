@@ -28,7 +28,7 @@ func (a *App) Router() http.Handler {
 		r.With(auth).Post("/orders", oh.Create)
 		r.With(auth).Get("/orders", oh.List)
 		r.With(auth).Get("/balance/withdrawals", th.ListWithdrawals)
-		r.With(auth).Post("/balance/withdraw", th.CreateWithdraw)
+		r.With(auth).Post("/balance/withdraw", th.CreateWithdrawal)
 		r.With(auth).Get("/balance", th.Balance)
 	})
 
