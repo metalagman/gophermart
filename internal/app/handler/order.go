@@ -54,27 +54,21 @@ func (h *OrderHandler) Create(w http.ResponseWriter, r *http.Request) {
 	})
 
 	if err != nil {
-		if errors.Is(err, apperr.ErrInvalidInput) {
-			l.Debug().Err(err).Str("order_id", string(b)).Msg("Validation error")
-			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		if errors.Is(err, apperr.ErrSoftConflict) {
+			l.Debug().Err(err).Msg("Same user")
+			http.Error(w, err.Error(), http.StatusOK)
 			return
 		}
 
 		if errors.Is(err, apperr.ErrConflict) {
 			l.Debug().Err(err).Msg("Conflict")
-			eo, err := h.orders.ReadByExternalID(ctx, m.ExternalID)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			if eo.UserID == u.ID {
-				l.Debug().Err(err).Msg("Same user")
-				http.Error(w, err.Error(), http.StatusOK)
-				return
-			}
-
 			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+
+		if errors.Is(err, apperr.ErrInvalidInput) {
+			l.Debug().Err(err).Str("order_id", string(b)).Msg("Validation error")
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
 

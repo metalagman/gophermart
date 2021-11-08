@@ -20,7 +20,7 @@ func (a *App) Router() http.Handler {
 	// api
 	uh := handler.NewUserHandler(a.users, a.session)
 	oh := handler.NewOrderHandler(a.orders, a.syncer)
-	th := handler.NewTransactionHandler(a.transactions)
+	th := handler.NewTransactionHandler(a.db, a.transactions, a.orders)
 
 	r.Route("/api/user", func(r chi.Router) {
 		r.Post("/login", uh.Login)

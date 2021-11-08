@@ -23,6 +23,7 @@ type App struct {
 	session      session.Manager
 	stopCh       chan struct{}
 	syncer       *syncer.Service
+	db           *sql.DB
 }
 
 func New(cfg config.Config, logger logger.Logger, e embed.FS) (*App, error) {

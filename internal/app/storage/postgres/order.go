@@ -35,6 +35,28 @@ func NewOrderRepository(db *sql.DB) (*OrderRepository, error) {
 
 // Create implementation of interface storage.OrderRepository
 func (r *OrderRepository) Create(ctx context.Context, m *model.Order) (*model.Order, error) {
+	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelDefault,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("tx begin: %w", err)
+	}
+
+	res, err := r.TxCreate(ctx, tx, m)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, fmt.Errorf("tx create: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("tx commit: %w", err)
+	}
+
+	return res, nil
+}
+
+// TxCreate implementation of interface storage.OrderRepository
+func (r *OrderRepository) TxCreate(ctx context.Context, tx *sql.Tx, m *model.Order) (*model.Order, error) {
 	if m.ExternalID == "" || !luhn.Valid(m.ExternalID) {
 		return nil, apperr.ErrInvalidInput
 	}
@@ -45,10 +67,17 @@ func (r *OrderRepository) Create(ctx context.Context, m *model.Order) (*model.Or
 		RETURNING id
 `
 
-	err := r.db.QueryRowContext(ctx, SQL, m.ExternalID, m.UserID).Scan(&m.ID)
+	err := tx.QueryRowContext(ctx, SQL, m.ExternalID, m.UserID).Scan(&m.ID)
 	if err != nil {
 		if pgErr, ok := err.(*pg.Error); ok {
 			if pgerrcode.IsIntegrityConstraintViolation(string(pgErr.Code)) {
+				em, err := r.ReadByExternalID(ctx, m.ExternalID)
+				if err != nil {
+					return nil, err
+				}
+				if em.UserID == m.UserID {
+					return nil, apperr.ErrSoftConflict
+				}
 				return nil, apperr.ErrConflict
 			}
 		}

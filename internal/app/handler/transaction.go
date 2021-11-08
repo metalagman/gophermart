@@ -1,21 +1,28 @@
 package handler
 
 import (
+	"database/sql"
 	"errors"
+	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"gophermart/internal/app/apperr"
 	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
 	"gophermart/internal/app/storage"
 	"net/http"
+	"time"
 )
 
 type TransactionHandler struct {
+	db           *sql.DB
+	orders       storage.OrderRepository
 	transactions storage.TransactionRepository
 }
 
-func NewTransactionHandler(transactions storage.TransactionRepository) *TransactionHandler {
+func NewTransactionHandler(db *sql.DB, transactions storage.TransactionRepository, orders storage.OrderRepository) *TransactionHandler {
 	return &TransactionHandler{
+		db:           db,
+		orders:       orders,
 		transactions: transactions,
 	}
 }
@@ -96,14 +103,47 @@ func (h *TransactionHandler) CreateWithdrawal(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	m, err := h.transactions.Create(ctx, &model.Transaction{
-		ExternalOrderID: in.ExternalOrderID,
-		UserID:          u.ID,
+	tx, err := h.db.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelDefault,
+	})
+	if err := readBody(r, in); err != nil {
+		l.Error().Err(err).Send()
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	om, err := h.orders.TxCreate(ctx, tx, &model.Order{
+		ID:         uuid.New(),
+		CreatedAt:  time.Now(),
+		ExternalID: in.ExternalOrderID,
+		UserID:     u.ID,
+	})
+
+	if err != nil {
+		_ = tx.Rollback()
+
+		if errors.Is(err, apperr.ErrInvalidInput) {
+			l.Debug().Err(err).Str("order_id", in.ExternalOrderID).Msg("Validation error")
+			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+			return
+		}
+
+		l.Debug().Err(err).Msg("Internal error")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	m, err := h.transactions.TxCreate(ctx, tx, &model.Transaction{
+		OrderID:         om.ID,
+		ExternalOrderID: om.ExternalID,
+		UserID:          om.UserID,
 		TypeID:          model.TransactionTypeWithdrawal,
 		Amount:          in.Amount,
 	})
 
 	if err != nil {
+		_ = tx.Rollback()
+
 		if errors.Is(err, apperr.ErrInsufficientFunds) {
 			l.Debug().Err(err).Msg("Insufficient funds")
 			http.Error(w, err.Error(), http.StatusPaymentRequired)
@@ -128,7 +168,13 @@ func (h *TransactionHandler) CreateWithdrawal(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		l.Debug().Err(err).Msg("Internal error")
+		l.Error().Err(err).Msg("Internal error")
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := tx.Commit(); err != nil {
+		l.Error().Err(err).Send()
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

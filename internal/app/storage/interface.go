@@ -3,6 +3,7 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 	"gophermart/internal/app/model"
@@ -20,6 +21,8 @@ type UserRepository interface {
 type OrderRepository interface {
 	// Create a new model.Order
 	Create(ctx context.Context, m *model.Order) (*model.Order, error)
+	// TxCreate a new model.Order within the tx
+	TxCreate(ctx context.Context, tx *sql.Tx, m *model.Order) (*model.Order, error)
 	// Read instance of model.Order
 	Read(ctx context.Context, id uuid.UUID) (*model.Order, error)
 	// ReadByExternalID instance of model.Order
@@ -37,6 +40,8 @@ type TransactionRepository interface {
 	GetWithdrawalSum(ctx context.Context, m *model.User) (*decimal.Decimal, error)
 	// GetWithdrawals for user
 	GetWithdrawals(ctx context.Context, m *model.User) ([]*model.Transaction, error)
+	// TxCreate a new model.Transaction
+	TxCreate(ctx context.Context, tx *sql.Tx, m *model.Transaction) (*model.Transaction, error)
 	// Create a new model.Transaction
 	Create(ctx context.Context, m *model.Transaction) (*model.Transaction, error)
 }

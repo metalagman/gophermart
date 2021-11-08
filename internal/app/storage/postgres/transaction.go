@@ -19,7 +19,8 @@ import (
 var _ storage.TransactionRepository = (*TransactionRepository)(nil)
 
 type TransactionRepository struct {
-	db *sql.DB
+	db     *sql.DB
+	orders OrderRepository
 }
 
 func (r *TransactionRepository) GetReplenishmentSum(ctx context.Context, m *model.User) (*decimal.Decimal, error) {
@@ -111,20 +112,44 @@ func (r *TransactionRepository) Create(ctx context.Context, m *model.Transaction
 		return nil, apperr.ErrInvalidInput
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
-	ctx = l.WithContext(ctx)
-
-	m.ID = uuid.New()
-	m.CreatedAt = time.Now()
-
 	tx, err := r.db.BeginTx(ctx, &sql.TxOptions{
 		Isolation: sql.LevelSerializable,
 	})
 	if err != nil {
-		l.Error().Err(err).Msg("DB transaction begin")
-		return nil, err
+		l.Error().Err(err).Send()
+		return nil, fmt.Errorf("tx begin: %w", err)
 	}
+
+	res, err := r.TxCreate(ctx, tx, m)
+	if err != nil {
+		_ = tx.Rollback()
+		return nil, fmt.Errorf("tx create: %w", err)
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, fmt.Errorf("tx commit: %w", err)
+	}
+
+	dur := time.Now().Sub(m.CreatedAt)
+	l.Debug().Dur("duration", dur).Msg("Done creating tx")
+
+	return res, nil
+}
+
+// TxCreate implementation of interface storage.TransactionRepository
+func (r *TransactionRepository) TxCreate(ctx context.Context, tx *sql.Tx, m *model.Transaction) (*model.Transaction, error) {
+	l := logger.Ctx(ctx).With().
+		Str("method", "Create").
+		Str("external_order_id", m.ExternalOrderID).
+		Logger()
+	l.Debug().Msg("Creating transaction")
+
+	if m.ExternalOrderID == "" || !luhn.Valid(m.ExternalOrderID) {
+		return nil, apperr.ErrInvalidInput
+	}
+
+	m.ID = uuid.New()
+	m.CreatedAt = time.Now()
 
 	var balance decimal.Decimal
 	const sqlLock = `SELECT balance FROM users WHERE id=$1 FOR UPDATE`
@@ -137,15 +162,13 @@ func (r *TransactionRepository) Create(ctx context.Context, m *model.Transaction
 	if balance.LessThan(m.Amount) {
 		err := apperr.ErrInsufficientFunds
 		l.Error().Err(err).Msg("Insufficient funds")
-		_ = tx.Rollback()
 		return nil, err
 	}
 
 	const sqlTx = `INSERT INTO transactions (type_id, user_id, order_id, external_order_id, amount) VALUES ($1, $2, $3, $4, $5)`
-	_, err = tx.ExecContext(ctx, sqlTx, m.TypeID, m.UserID, m.OrderID, m.ExternalOrderID, m.Amount)
+	_, err := tx.ExecContext(ctx, sqlTx, m.TypeID, m.UserID, m.OrderID, m.ExternalOrderID, m.Amount)
 	if err != nil {
 		l.Error().Err(err).Msg("TX insert failed")
-		_ = tx.Rollback()
 		return nil, err
 	}
 
@@ -153,12 +176,6 @@ func (r *TransactionRepository) Create(ctx context.Context, m *model.Transaction
 	_, err = tx.ExecContext(ctx, sqlUpdateBalance, m.Amount, m.UserID)
 	if err != nil {
 		l.Error().Err(err).Msg("Balance update failed")
-		_ = tx.Rollback()
-		return nil, err
-	}
-
-	if err := tx.Commit(); err != nil {
-		l.Error().Err(err).Msg("TX commit failed")
 		return nil, err
 	}
 
