@@ -57,13 +57,13 @@ func (r *UserRepository) Create(ctx context.Context, user *model.User) (*model.U
 // Get implementation of interface storage.UserRepository
 func (r *UserRepository) Read(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	const SQL = `
-		SELECT id, name
+		SELECT id, name, balance
 		FROM users 
 		WHERE id=$1
 `
 	user := &model.User{}
 
-	err := r.db.QueryRowContext(ctx, SQL, id).Scan(&user.ID, &user.Name)
+	err := r.db.QueryRowContext(ctx, SQL, id).Scan(&user.ID, &user.Name, &user.Balance)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperr.ErrNotFound
@@ -76,14 +76,14 @@ func (r *UserRepository) Read(ctx context.Context, id uuid.UUID) (*model.User, e
 
 func (r *UserRepository) ReadByNameAndPassword(ctx context.Context, name string, password string) (*model.User, error) {
 	const SQL = `
-		SELECT id, name
+		SELECT id, name, balance
 		FROM users
 		WHERE name = $1 
 		AND password = crypt($2, password);
 `
 	user := &model.User{}
 
-	err := r.db.QueryRowContext(ctx, SQL, name, password).Scan(&user.ID, &user.Name)
+	err := r.db.QueryRowContext(ctx, SQL, name, password).Scan(&user.ID, &user.Name, &user.Balance)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, apperr.ErrNotFound
