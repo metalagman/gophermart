@@ -9,7 +9,6 @@ import (
 	"github.com/Rican7/retry/backoff"
 	"github.com/Rican7/retry/strategy"
 	"github.com/google/uuid"
-	"github.com/rs/zerolog/log"
 	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
 	"gophermart/pkg/accrual"
@@ -72,9 +71,10 @@ func New(db *sql.DB, ac *accrual.Service) (*Service, error) {
 }
 
 func (s *Service) Start(numWorkers int) {
-	log.Info().Int("worker_num", numWorkers).Msg("Starting workers")
+	s.logger.Info().Int("worker_num", numWorkers).Msg("Starting workers")
 	for i := 0; i < numWorkers; i++ {
 		go func(workerID int, l logger.Logger, jobs chan Job, stop chan struct{}) {
+			wl := l.With().Int("worker_id", workerID).Logger()
 			for {
 				select {
 				case <-stop:
@@ -85,15 +85,15 @@ func (s *Service) Start(numWorkers int) {
 						return
 					}
 					id := uuid.New()
-					ll := l.With().Int("worker_id", workerID).Str("job_id", id.String()).Logger()
-					ll.Info().Msg("Running job")
+					jl := wl.With().Str("job_id", id.String()).Logger()
+					jl.Info().Msg("Running job")
 
 					err := retry.Retry(
 						func(attempt uint) error {
 							defer func() {
 								v := recover()
 								if v != nil {
-									ll.Error().
+									jl.Error().
 										Uint("attempt", attempt).
 										Str("panic", fmt.Sprintf("%v", v)).
 										Msg("Panic recovered")
@@ -101,7 +101,7 @@ func (s *Service) Start(numWorkers int) {
 							}()
 							err := job()
 							if err != nil {
-								ll.Error().Err(err).
+								jl.Error().Err(err).
 									Uint("attempt", attempt).
 									Msg("Job run failed")
 							}
@@ -111,11 +111,11 @@ func (s *Service) Start(numWorkers int) {
 						strategy.Backoff(backoff.Fibonacci(10*time.Millisecond)),
 					)
 					if err != nil {
-						ll.Error().Msg("Job completely failed")
+						jl.Error().Msg("Job completely failed")
 						return
 					}
 
-					ll.Info().Msg("Job done")
+					jl.Info().Msg("Job done")
 				}
 			}
 		}(i, s.logger, s.jobs, s.stopCh)
