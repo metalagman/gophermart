@@ -11,7 +11,7 @@ import (
 )
 
 type Service struct {
-	apiUrl     string
+	apiURL     string
 	httpClient *http.Client
 	logger     zerolog.Logger
 }
@@ -22,7 +22,7 @@ func (s *Service) LoggerComponent() string {
 
 func NewService(apiURL string, opts ...ServiceOption) (*Service, error) {
 	c := &Service{
-		apiUrl:     apiURL,
+		apiURL:     apiURL,
 		httpClient: http.DefaultClient,
 		logger:     log.Logger,
 	}
@@ -82,6 +82,10 @@ func (s *Service) genericCall(ctx context.Context, method, endpoint string, in i
 	ctx = l.WithContext(ctx)
 
 	res, err := s.request(ctx, method, endpoint, in)
+	defer func() {
+		_ = res.Body.Close()
+	}()
+
 	if err != nil {
 		l.Error().Err(err).
 			Msg("Service request failed")
@@ -109,11 +113,11 @@ func (s *Service) request(
 	endpoint string,
 	bodyParams interface{},
 ) (*http.Response, error) {
-	fullUrl := s.apiUrl + endpoint
+	fullURL := s.apiURL + endpoint
 	l := zerolog.Ctx(ctx).With().
 		Str("http_method", method).
 		Str("endpoint", endpoint).
-		Str("url", fullUrl).
+		Str("url", fullURL).
 		Str("method", method).
 		Str("endpoint", endpoint).
 		Logger()
@@ -124,7 +128,7 @@ func (s *Service) request(
 		return nil, fmt.Errorf("json encode: %w", err)
 	}
 
-	req, err := http.NewRequest(method, fullUrl, bytes.NewReader(rawJson))
+	req, err := http.NewRequest(method, fullURL, bytes.NewReader(rawJson))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
