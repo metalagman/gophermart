@@ -5,8 +5,11 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/Rican7/retry"
+	"github.com/Rican7/retry/backoff"
+	"github.com/Rican7/retry/strategy"
 	"github.com/google/uuid"
-	"github.com/sony/gobreaker"
+	"github.com/rs/zerolog/log"
 	"gophermart/internal/app/logger"
 	"gophermart/internal/app/model"
 	"gophermart/pkg/accrual"
@@ -63,19 +66,15 @@ func New(db *sql.DB, ac *accrual.Service) (*Service, error) {
 		fetchInterval: 5 * time.Second,
 		jobTimeout:    30 * time.Second,
 	}
-	s.Start(runtime.GOMAXPROCS(0))
+	s.Start(runtime.GOMAXPROCS(0) * 2)
 
 	return s, nil
 }
 
 func (s *Service) Start(numWorkers int) {
+	log.Info().Int("worker_num", numWorkers).Msg("Starting workers")
 	for i := 0; i < numWorkers; i++ {
 		go func(workerID int, l logger.Logger, jobs chan Job, stop chan struct{}) {
-			st := gobreaker.Settings{
-				MaxRequests: 3,
-				Interval:    100 * time.Millisecond,
-				Timeout:     s.JobTimeout(),
-			}
 			for {
 				select {
 				case <-stop:
@@ -85,17 +84,37 @@ func (s *Service) Start(numWorkers int) {
 					if !ok {
 						return
 					}
-					cb := gobreaker.NewCircuitBreaker(st)
 					id := uuid.New()
 					ll := l.With().Int("worker_id", workerID).Str("job_id", id.String()).Logger()
 					ll.Info().Msg("Running job")
-					_, err := cb.Execute(func() (interface{}, error) {
-						return nil, job()
-					})
+
+					err := retry.Retry(
+						func(attempt uint) error {
+							defer func() {
+								v := recover()
+								if v != nil {
+									ll.Error().
+										Uint("attempt", attempt).
+										Str("panic", fmt.Sprintf("%v", v)).
+										Msg("Panic recovered")
+								}
+							}()
+							err := job()
+							if err != nil {
+								ll.Error().Err(err).
+									Uint("attempt", attempt).
+									Msg("Job run failed")
+							}
+							return err
+						},
+						strategy.Limit(3),
+						strategy.Backoff(backoff.Fibonacci(10*time.Millisecond)),
+					)
 					if err != nil {
-						ll.Error().Msg("Job failed")
-						continue
+						ll.Error().Msg("Job completely failed")
+						return
 					}
+
 					ll.Info().Msg("Job done")
 				}
 			}
