@@ -82,15 +82,14 @@ func (s *Service) genericCall(ctx context.Context, method, endpoint string, in i
 	ctx = l.WithContext(ctx)
 
 	res, err := s.request(ctx, method, endpoint, in)
-	defer func() {
-		_ = res.Body.Close()
-	}()
-
 	if err != nil {
 		l.Error().Err(err).
 			Msg("Service request failed")
 		return fmt.Errorf("request: %w", err)
 	}
+	defer func() {
+		_ = res.Body.Close()
+	}()
 
 	if res.StatusCode >= 400 {
 		resBody := readString(res.Body)
@@ -101,6 +100,10 @@ func (s *Service) genericCall(ctx context.Context, method, endpoint string, in i
 	}
 
 	if err := readJSON(res.Body, out); err != nil {
+		resBody := readString(res.Body)
+		l.Error().
+			Str("http_body", resBody).
+			Msg("Invalid json response")
 		return fmt.Errorf("body read: %w", err)
 	}
 
