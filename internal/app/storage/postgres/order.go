@@ -181,6 +181,10 @@ func (r *OrderRepository) AllByUserID(ctx context.Context, userID uuid.UUID) ([]
 	res := make([]*model.Order, 0)
 
 	for rows.Next() {
+		if err := rows.Err(); err != nil {
+			l.Debug().Err(err).Send()
+			return nil, fmt.Errorf("rows next: %w", err)
+		}
 		m := &model.Order{}
 		if err := rows.Scan(&m.ID, &m.ExternalID, &m.CreatedAt, &m.UserID, &m.Status, &m.Accrual); err != nil {
 			l.Debug().Err(err).Send()

@@ -84,7 +84,7 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	out := &accrual.GetOrderResponse{}
-	rawJson, _ := json.Marshal(out)
+	rawJSON, _ := json.Marshal(out)
 
 	if rand.Float32() < 0.5 {
 		http.Error(w, "fail", http.StatusInternalServerError)
@@ -96,5 +96,5 @@ func GetOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, _ = w.Write(rawJson)
+	_, _ = w.Write(rawJSON)
 }

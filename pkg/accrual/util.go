@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 )
 
-// readJson into interface
-func readJson(in io.ReadCloser, v interface{}) error {
+// readJSON into interface
+func readJSON(in io.ReadCloser, v interface{}) error {
 	body, err := ioutil.ReadAll(in)
 	_ = in.Close()
 	if err != nil {

@@ -82,6 +82,10 @@ func (r *TransactionRepository) GetWithdrawals(ctx context.Context, m *model.Use
 	}
 
 	for rows.Next() {
+		if err := rows.Err(); err != nil {
+			l.Debug().Err(err).Send()
+			return nil, fmt.Errorf("rows next: %w", err)
+		}
 		m := &model.Transaction{}
 		if err := rows.Scan(&m.CreatedAt, &m.ExternalOrderID, &m.Amount); err != nil {
 			l.Debug().Err(err).Send()
@@ -130,7 +134,7 @@ func (r *TransactionRepository) Create(ctx context.Context, m *model.Transaction
 		return nil, fmt.Errorf("tx commit: %w", err)
 	}
 
-	dur := time.Now().Sub(m.CreatedAt)
+	dur := time.Since(m.CreatedAt)
 	l.Debug().Dur("duration", dur).Msg("Done creating tx")
 
 	return res, nil
@@ -179,7 +183,7 @@ func (r *TransactionRepository) TxCreate(ctx context.Context, tx *sql.Tx, m *mod
 		return nil, err
 	}
 
-	dur := time.Now().Sub(m.CreatedAt)
+	dur := time.Since(m.CreatedAt)
 	l.Debug().Dur("duration", dur).Msg("Done creating tx")
 
 	return m, nil

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/google/uuid"
 	"github.com/sony/gobreaker"
 	"gophermart/internal/app/logger"
@@ -116,8 +117,6 @@ func (s *Service) Start(numWorkers int) {
 		}
 
 	}(s.logger, s.fetchInterval)
-
-	return
 }
 
 func (s *Service) Stop() {
@@ -207,7 +206,7 @@ func (s *Service) FetchOrderDetails(id uuid.UUID) Job {
 			return err
 		}
 
-		dur := time.Now().Sub(now)
+		dur := time.Since(now)
 		l.Debug().Dur("duration", dur).Msg("Done fetching status")
 
 		return nil
@@ -238,12 +237,12 @@ func (s *Service) FetchAll() Job {
 
 		rows, err := tx.QueryContext(ctx, sqlRead, statusRegistered, statusProcessing)
 		if err != nil {
+			_ = tx.Rollback()
 			if errors.Is(err, sql.ErrNoRows) {
 				return nil
 			}
 			l.Error().Err(err).Msg("DB select")
-			_ = tx.Rollback()
-			return err
+			return fmt.Errorf("query context: %w", err)
 		}
 		defer func(rows *sql.Rows) {
 			_ = rows.Close()
@@ -251,6 +250,11 @@ func (s *Service) FetchAll() Job {
 
 		var id uuid.UUID
 		for rows.Next() {
+			if err := rows.Err(); err != nil {
+				_ = tx.Rollback()
+				l.Error().Err(err).Msg("rows.Next()")
+				return fmt.Errorf("rows next: %w", err)
+			}
 			if err := rows.Scan(&id); err != nil {
 				go s.Run(s.FetchOrderDetails(id))
 			}

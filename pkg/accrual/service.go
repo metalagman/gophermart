@@ -100,7 +100,7 @@ func (s *Service) genericCall(ctx context.Context, method, endpoint string, in i
 		return NewRemoteError(resBody, res.StatusCode)
 	}
 
-	if err := readJson(res.Body, out); err != nil {
+	if err := readJSON(res.Body, out); err != nil {
 		return fmt.Errorf("body read: %w", err)
 	}
 
@@ -123,12 +123,12 @@ func (s *Service) request(
 		Logger()
 	l.Debug().Msg("HTTP request")
 
-	rawJson, err := json.Marshal(bodyParams)
+	rawJSON, err := json.Marshal(bodyParams)
 	if err != nil {
 		return nil, fmt.Errorf("json encode: %w", err)
 	}
 
-	req, err := http.NewRequest(method, fullURL, bytes.NewReader(rawJson))
+	req, err := http.NewRequest(method, fullURL, bytes.NewReader(rawJSON))
 	if err != nil {
 		return nil, fmt.Errorf("new request: %w", err)
 	}
@@ -137,7 +137,7 @@ func (s *Service) request(
 	req.Header.Add("Content-Type", "application/json")
 	req.Header.Add("Accept", "application/json")
 
-	l.Debug().Str("request_body", string(rawJson)).Msg("Doing request")
+	l.Debug().Str("request_body", string(rawJSON)).Msg("Doing request")
 
 	res, err := s.httpClient.Do(req)
 	if err != nil {
