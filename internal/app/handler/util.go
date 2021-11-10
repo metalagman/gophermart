@@ -51,8 +51,8 @@ func WriteResponse(w http.ResponseWriter, v interface{}, statusCode int) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	w.WriteHeader(statusCode)
 	w.Header().Add("Content-Type", "application/json")
+	w.WriteHeader(statusCode)
 	_, _ = w.Write(resBody)
 }
 
